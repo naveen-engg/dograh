@@ -1058,6 +1058,39 @@ def create_tts_service(
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
+    elif user_config.tts.provider == ServiceProviders.VOICESTUDIO.value:
+        from api.services.pipecat.voicestudio_tts import (
+            VoiceStudioTTSProvider,
+            VoiceStudioTTSSettings,
+        )
+
+        base_url = (
+            getattr(user_config.tts, "base_url", None) or "http://voicestudio-tts:8080"
+        ).rstrip("/")
+        _validate_runtime_service_url(base_url, "base_url")
+
+        voice = getattr(user_config.tts, "voice", None) or "af_heart"
+        speed = getattr(user_config.tts, "speed", None) or 1.0
+        language = getattr(user_config.tts, "language", None) or "en-us"
+        model = getattr(user_config.tts, "model", None) or "kokoro-82m"
+        max_ttfb_ms = getattr(user_config.tts, "max_ttfb_ms", 450.0)
+
+        session = aiohttp.ClientSession()
+        return VoiceStudioTTSProvider(
+            base_url=base_url,
+            aiohttp_session=session,
+            sample_rate=audio_config.transport_out_sample_rate,
+            settings=VoiceStudioTTSSettings(
+                model=model,
+                voice=voice,
+                speed=speed,
+                language=language,
+            ),
+            max_ttfb_ms=max_ttfb_ms,
+            text_filters=[xml_function_tag_filter],
+            skip_aggregator_types=["recording_router", "recording"],
+            silence_time_s=1.0,
+        )
     else:
         raise HTTPException(
             status_code=400, detail=f"Invalid TTS provider {user_config.tts.provider}"

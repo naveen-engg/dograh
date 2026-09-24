@@ -61,6 +61,10 @@ from api.services.configuration.options import (
     SMALLEST_TTS_PRO_VOICES,
     SMALLEST_TTS_VOICES,
     SPEECHMATICS_STT_LANGUAGES,
+    VOICESTUDIO_DEFAULT_BASE_URL,
+    VOICESTUDIO_TTS_LANGUAGES,
+    VOICESTUDIO_TTS_MODELS,
+    VOICESTUDIO_TTS_VOICES,
 )
 from api.services.configuration.options.google import (
     GOOGLE_VERTEX_DEFAULT_LOCATION,
@@ -113,6 +117,7 @@ class ServiceProviders(str, Enum):
     XAI = "xai"
     LMNT = "lmnt"
     SPEECHIFY = "speechify"
+    VOICESTUDIO = "voicestudio"
 
 
 class BaseServiceConfiguration(BaseModel):
@@ -148,6 +153,7 @@ class BaseServiceConfiguration(BaseModel):
         ServiceProviders.XAI,
         ServiceProviders.LMNT,
         ServiceProviders.SPEECHIFY,
+        ServiceProviders.VOICESTUDIO,
     ]
     api_key: str | list[str]
 
@@ -1725,6 +1731,55 @@ class SpeechifyTTSConfiguration(BaseTTSConfiguration):
     )
 
 
+VOICESTUDIO_PROVIDER_MODEL_CONFIG = provider_model_config(
+    "VoiceStudio",
+    description="VoiceStudio local GPU-accelerated Kokoro-82M and OmniVoice low-latency streaming TTS.",
+    provider_docs_url="https://github.com/debpalash/VoiceStudio",
+)
+
+
+@register_tts
+class VoiceStudioTTSConfiguration(BaseTTSConfiguration):
+    model_config = VOICESTUDIO_PROVIDER_MODEL_CONFIG
+    provider: Literal[ServiceProviders.VOICESTUDIO] = ServiceProviders.VOICESTUDIO
+    model: str = Field(
+        default="kokoro-82m",
+        description="VoiceStudio local TTS model.",
+        json_schema_extra={"examples": list(VOICESTUDIO_TTS_MODELS)},
+    )
+    voice: str = Field(
+        default="af_heart",
+        description="VoiceStudio voice identifier.",
+        json_schema_extra={
+            "examples": list(VOICESTUDIO_TTS_VOICES),
+            "allow_custom_input": True,
+        },
+    )
+    language: str = Field(
+        default="en-us",
+        description="Synthesis language code.",
+        json_schema_extra={
+            "examples": list(VOICESTUDIO_TTS_LANGUAGES),
+            "allow_custom_input": True,
+        },
+    )
+    speed: float = Field(
+        default=1.0, ge=0.5, le=2.0, description="Speech speed multiplier (0.5 to 2.0)."
+    )
+    base_url: str = Field(
+        default=VOICESTUDIO_DEFAULT_BASE_URL,
+        description="Local VoiceStudio backend API endpoint.",
+    )
+    max_ttfb_ms: float = Field(
+        default=450.0,
+        description="Maximum Time-To-First-Byte before tripping circuit breaker to cloud fallback.",
+    )
+    api_key: str | list[str] | None = Field(
+        default=None,
+        description="Optional API key for VoiceStudio gateway if authentication is enabled.",
+    )
+
+
 TTSConfig = Annotated[
     Union[
         DeepgramTTSConfiguration,
@@ -1744,6 +1799,7 @@ TTSConfig = Annotated[
         XAITTSConfiguration,
         LmntTTSConfiguration,
         SpeechifyTTSConfiguration,
+        VoiceStudioTTSConfiguration,
     ],
     Field(discriminator="provider"),
 ]

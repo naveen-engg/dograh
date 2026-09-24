@@ -42,6 +42,7 @@ def build_pipeline(
     pipeline_metrics_aggregator,
     termination_funnel,
     answer_supervisor=None,
+    laya_interceptor=None,
 ):
     """Build the call pipeline: everything that lives for the whole call.
 
@@ -59,6 +60,8 @@ def build_pipeline(
             aggregator and the output transport.
         answer_supervisor: Optional answer sensor before the user aggregator,
             with its context gate immediately after the aggregator.
+        laya_interceptor: Optional Laya System 1 fast-turn interceptor for
+            sub-35ms backchannel filtering, guardrails, and emergency escalation.
     """
     # Build processors with optional answer handling.
     #
@@ -71,6 +74,9 @@ def build_pipeline(
         termination_funnel,
         stt,
     ]
+
+    if laya_interceptor is not None:
+        processors.append(laya_interceptor)
 
     if answer_supervisor is not None:
         processors.append(answer_supervisor)
