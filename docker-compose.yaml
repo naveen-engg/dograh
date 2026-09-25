@@ -57,7 +57,7 @@ services:
       - app-network
 
   minio:
-    image: quay.io/minio/minio
+    image: ${MINIO_IMAGE:-cgr.dev/chainguard/minio:latest}
     container_name: minio
     command: server /data --console-address ":9001"
     environment:
@@ -70,10 +70,23 @@ services:
     volumes:
       - minio-data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 0"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
+
+  voicestudio:
+    image: ${VOICESTUDIO_IMAGE:-ghcr.io/debpalash/voicestudio:latest}
+    container_name: voicestudio
+    profiles: ["voicestudio", "full"]
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      MODEL: "kokoro-82m"
+      DEVICE: "${VOICESTUDIO_DEVICE:-cpu}"
     networks:
       - app-network
 
@@ -142,9 +155,13 @@ services:
 
   api:
     image: ${REGISTRY:-dograhai}/dograh-api:latest
+    build:
+      context: .
+      dockerfile: api/Dockerfile
     environment:
       # Core application config
       ENVIRONMENT: "${ENVIRONMENT:-local}"
+      VOICESTUDIO_API_URL: "${VOICESTUDIO_API_URL:-http://voicestudio:8080}"
       LOG_LEVEL: "INFO"
 
       # Set to "false" in .env to disable public signup (invite-only installs).
@@ -291,6 +308,9 @@ services:
 
   ui:
     image: ${REGISTRY:-dograhai}/dograh-ui:latest
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
     environment:
       # Bind the Next.js standalone server to all interfaces
       HOSTNAME: "0.0.0.0"
