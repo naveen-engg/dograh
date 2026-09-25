@@ -47,6 +47,14 @@ if (Test-Path $EnvFile) {
     }
 }
 
+$PipecatSrc = Join-Path $BaseDir 'pipecat/src'
+if ($env:PYTHONPATH) {
+    $env:PYTHONPATH = "$BaseDir;$PipecatSrc;$($env:PYTHONPATH)"
+} else {
+    $env:PYTHONPATH = "$BaseDir;$PipecatSrc"
+}
+[Environment]::SetEnvironmentVariable('PYTHONPATH', $env:PYTHONPATH, 'Process')
+
 if (-not $env:UVICORN_BASE_PORT)   { $env:UVICORN_BASE_PORT = '8000' }
 
 $HealthEndpoint    = '/api/v1/health'
@@ -126,7 +134,7 @@ foreach ($spec in $serviceSpecs) {
 
     Write-Host "-> Starting $name"
 
-    $wrapped = "cd /d `"$BaseDir`" && $($spec.Cmd) >> `"$logPath`" 2>&1"
+    $wrapped = "cd /d `"$BaseDir`" && call `"$VenvPath\Scripts\activate.bat`" && set PYTHONPATH=$BaseDir;$PipecatSrc;%PYTHONPATH% && $($spec.Cmd) >> `"$logPath`" 2>&1"
     $proc = Start-Process cmd.exe -ArgumentList '/c', $wrapped -PassThru -WindowStyle Hidden
 
     Set-Content -Path $pidFile -Value $proc.Id
