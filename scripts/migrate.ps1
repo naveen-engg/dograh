@@ -7,11 +7,11 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BaseDir   = Split-Path -Parent $ScriptDir
 Set-Location $BaseDir
 
-# Ensure repository root is importable for Alembic env/module resolution.
+$PipecatSrc = Join-Path $BaseDir 'pipecat/src'
 if ($env:PYTHONPATH) {
-    $env:PYTHONPATH = "$BaseDir;$($env:PYTHONPATH)"
+    $env:PYTHONPATH = "$BaseDir;$PipecatSrc;$($env:PYTHONPATH)"
 } else {
-    $env:PYTHONPATH = $BaseDir
+    $env:PYTHONPATH = "$BaseDir;$PipecatSrc"
 }
 
 $EnvFile = Join-Path $BaseDir 'api/.env'
