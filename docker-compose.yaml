@@ -59,6 +59,7 @@ services:
   minio:
     image: ${MINIO_IMAGE:-cgr.dev/chainguard/minio:latest}
     container_name: minio
+    user: "0:0"
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: "${MINIO_ROOT_USER:-minioadmin}"
@@ -68,7 +69,7 @@ services:
       - "127.0.0.1:9000:9000" # Bind to localhost explicitly
       - "127.0.0.1:9001:9001"
     volumes:
-      - minio-data:/data
+      - minio_data:/data
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 0"]
       interval: 10s
@@ -309,8 +310,8 @@ services:
   ui:
     image: ${REGISTRY:-dograhai}/dograh-ui:latest
     build:
-      context: ./ui
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ui/Dockerfile
     environment:
       # Bind the Next.js standalone server to all interfaces
       HOSTNAME: "0.0.0.0"
@@ -378,7 +379,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  minio-data:
+  minio_data:
     driver: local
   nginx-generated:
     driver: local

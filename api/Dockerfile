@@ -160,6 +160,7 @@ COPY --chown=dograh:dograh \
      ./scripts/run_campaign_orchestrator.sh \
      ./scripts/drain_web.sh \
      ./scripts/
+RUN sed -i 's/\r$//' ./scripts/*.sh && chmod +x ./scripts/*.sh
 
 # ts_validator Node deps (built in ts-deps stage with full node:22-slim image).
 # The validator runs as a short-lived subprocess from api/mcp_server/ts_bridge.py.

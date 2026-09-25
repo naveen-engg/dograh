@@ -59,7 +59,7 @@ export function SupportModeBanner() {
 
       <div className="flex items-center gap-2 mt-1 sm:mt-0">
         <span className="text-[11px] text-amber-300/70">
-          Actor: {user?.email || "Support"}
+          Actor: {(user as { email?: string; primaryEmail?: string } | null)?.email || (user as { email?: string; primaryEmail?: string } | null)?.primaryEmail || "Support"}
         </span>
         <Button
           size="sm"
