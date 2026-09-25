@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Activity,
   AlertTriangle,
   ArrowUpCircle,
   AudioLines,
@@ -17,8 +18,11 @@ import {
   Megaphone,
   Phone,
   Settings,
+  ShieldCheck,
   TrendingUp,
+  UserCheck,
   UserRound,
+  Users,
   Workflow,
   Wrench,
 } from "lucide-react";
@@ -386,31 +390,65 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className={cn("notranslate", isCollapsed && "px-0")} translate="no">
-        {NAV_SECTIONS.map((section, index) => (
-          <SidebarGroup
-            key={section.label ?? "overview"}
-            className={index === 0 ? "mt-2" : "mt-6"}
-          >
-            {section.label && (
-              <SidebarGroupLabel
-                className={cn(
-                  "notranslate text-xs font-semibold uppercase tracking-wider text-muted-foreground",
-                  isCollapsed && "hidden"
-                )}
-                translate="no"
-              >
-                {section.label}
-              </SidebarGroupLabel>
-            )}
-            <SidebarMenu>
-              {section.items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarLink item={item} />
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
-        ))}
+        {(() => {
+          const userRole = (user as { role?: string })?.role;
+          const isSuperuser = (user as { is_superuser?: boolean })?.is_superuser;
+          const canAccessAdmin = isSuperuser || userRole === "super_admin" || userRole === "support_engineer";
+
+          const adminNavSection: SidebarNavSection = {
+            label: "PLATFORM ADMIN",
+            items: [
+              {
+                title: "Users & RBAC",
+                url: "/superadmin/users",
+                icon: Users,
+              },
+              {
+                title: "Audit Logs",
+                url: "/superadmin/audit-logs",
+                icon: ShieldCheck,
+              },
+              {
+                title: "Cross-Tenant Runs",
+                url: "/superadmin/runs",
+                icon: Activity,
+              },
+              {
+                title: "Impersonation Hub",
+                url: "/superadmin",
+                icon: UserCheck,
+              },
+            ],
+          };
+
+          const activeNavSections = canAccessAdmin ? [...NAV_SECTIONS, adminNavSection] : NAV_SECTIONS;
+
+          return activeNavSections.map((section, index) => (
+            <SidebarGroup
+              key={section.label ?? "overview"}
+              className={index === 0 ? "mt-2" : "mt-6"}
+            >
+              {section.label && (
+                <SidebarGroupLabel
+                  className={cn(
+                    "notranslate text-xs font-semibold uppercase tracking-wider text-muted-foreground",
+                    isCollapsed && "hidden"
+                  )}
+                  translate="no"
+                >
+                  {section.label}
+                </SidebarGroupLabel>
+              )}
+              <SidebarMenu>
+                {section.items.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarLink item={item} />
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+          ));
+        })()}
       </SidebarContent>
 
       <SidebarFooter

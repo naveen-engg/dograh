@@ -6,6 +6,8 @@ export interface BaseUser {
   email?: string;
   name?: string;
   image?: string;
+  role?: 'super_admin' | 'support_engineer' | 'tenant_admin' | 'tenant_user' | string;
+  is_superuser?: boolean;
 }
 
 // Local/OSS user type
@@ -14,7 +16,10 @@ export interface LocalUser extends BaseUser {
   organizationId?: string;
   displayName?: string;
   provider_id?: string;
+  role?: string;
+  is_superuser?: boolean;
 }
+
 
 // Union type for all user types
 export type AuthUser = CurrentUser | LocalUser;
