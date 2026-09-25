@@ -33,4 +33,10 @@ if (Test-Path $EnvFile) {
 }
 
 # Run migrations
-alembic -c api/alembic.ini upgrade head
+$AlembicBin = Join-Path $BaseDir 'venv/Scripts/alembic.exe'
+if (Test-Path $AlembicBin) {
+    & $AlembicBin -c api/alembic.ini upgrade head
+} else {
+    alembic -c api/alembic.ini upgrade head
+}
+

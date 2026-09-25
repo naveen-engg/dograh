@@ -27,9 +27,11 @@ from api.constants import DEFAULT_CAMPAIGN_RETRY_CONFIG
 from ..enums import (
     CallType,
     IntegrationAction,
+    SupportAuditAction,
     ToolCategory,
     ToolStatus,
     TriggerState,
+    UserRole,
     WebhookCredentialType,
     WorkflowRunState,
     WorkflowStatus,
@@ -68,8 +70,18 @@ class UserModel(Base):
         back_populates="users",
     )
     is_superuser = Column(Boolean, default=False)
+    role = Column(String, default=UserRole.TENANT_USER.value, nullable=False)
     email = Column(String, nullable=True)
     password_hash = Column(String, nullable=True)
+
+    @property
+    def effective_role(self) -> UserRole:
+        if self.is_superuser:
+            return UserRole.SUPER_ADMIN
+        try:
+            return UserRole(self.role)
+        except (ValueError, TypeError):
+            return UserRole.TENANT_USER
 
     __table_args__ = (
         Index(
@@ -79,6 +91,38 @@ class UserModel(Base):
             postgresql_where=text("email IS NOT NULL"),
         ),
     )
+
+
+class SupportAuditLog(Base):
+    """Audit log for support engineer impersonation and administrative access."""
+
+    __tablename__ = "support_audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    actor_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    actor_email = Column(String, nullable=True)
+    target_organization_id = Column(
+        Integer, ForeignKey("organizations.id"), nullable=True, index=True
+    )
+    target_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    action = Column(String, nullable=False)  # from SupportAuditAction
+    resource_type = Column(String, nullable=True)
+    resource_id = Column(String, nullable=True)
+    method = Column(String, nullable=True)
+    path = Column(String, nullable=True)
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    extra_metadata = Column(JSON, nullable=False, default=dict)
+    created_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True
+    )
+
+    actor = relationship("UserModel", foreign_keys=[actor_user_id])
+    target_user = relationship("UserModel", foreign_keys=[target_user_id])
+    target_organization = relationship(
+        "OrganizationModel", foreign_keys=[target_organization_id]
+    )
+
 
 
 class UserConfigurationModel(Base):

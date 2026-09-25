@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.future import select
 
 from api.db.base_client import BaseDBClient
-from api.db.models import UserConfigurationModel, UserModel
+from api.db.models import SupportAuditLog, UserConfigurationModel, UserModel
 from api.enums import UserConfigurationKey
 from api.schemas.ai_model_configuration import EffectiveAIModelConfiguration
 
@@ -219,3 +219,94 @@ class UserClient(BaseDBClient):
             await session.commit()
             await session.refresh(user)
             return user
+
+    async def update_user_role(self, user_id: int, role: str) -> None:
+        """Update a user's role (super_admin, support_engineer, tenant_admin, tenant_user)."""
+        async with self.async_session() as session:
+            from sqlalchemy import update
+
+            is_super = role == "super_admin"
+            stmt = (
+                update(UserModel)
+                .where(UserModel.id == user_id)
+                .values(role=role, is_superuser=is_super)
+            )
+            result = await session.execute(stmt)
+            if result.rowcount == 0:
+                raise ValueError(f"User with ID {user_id} not found")
+            await session.commit()
+
+    async def create_support_audit_log(
+        self,
+        actor_user_id: int,
+        action: str,
+        target_organization_id: int | None = None,
+        target_user_id: int | None = None,
+        actor_email: str | None = None,
+        resource_type: str | None = None,
+        resource_id: str | None = None,
+        method: str | None = None,
+        path: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        extra_metadata: dict | None = None,
+    ) -> SupportAuditLog:
+        """Record an audit trail entry for support engineer/admin impersonation and access."""
+        async with self.async_session() as session:
+            log_entry = SupportAuditLog(
+                actor_user_id=actor_user_id,
+                actor_email=actor_email,
+                target_organization_id=target_organization_id,
+                target_user_id=target_user_id,
+                action=action,
+                resource_type=resource_type,
+                resource_id=str(resource_id) if resource_id is not None else None,
+                method=method,
+                path=path,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                extra_metadata=extra_metadata or {},
+            )
+            session.add(log_entry)
+            await session.commit()
+            await session.refresh(log_entry)
+            return log_entry
+
+    async def get_support_audit_logs(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        actor_user_id: int | None = None,
+        target_organization_id: int | None = None,
+        action: str | None = None,
+    ) -> tuple[list[SupportAuditLog], int]:
+        """Fetch paginated audit log entries with optional filters."""
+        async with self.async_session() as session:
+            from sqlalchemy import desc, func
+
+            query = select(SupportAuditLog)
+            count_query = select(func.count(SupportAuditLog.id))
+
+            if actor_user_id is not None:
+                query = query.where(SupportAuditLog.actor_user_id == actor_user_id)
+                count_query = count_query.where(SupportAuditLog.actor_user_id == actor_user_id)
+
+            if target_organization_id is not None:
+                query = query.where(
+                    SupportAuditLog.target_organization_id == target_organization_id
+                )
+                count_query = count_query.where(
+                    SupportAuditLog.target_organization_id == target_organization_id
+                )
+
+            if action is not None:
+                query = query.where(SupportAuditLog.action == action)
+                count_query = count_query.where(SupportAuditLog.action == action)
+
+            total_count = (await session.execute(count_query)).scalar() or 0
+            query = query.order_by(desc(SupportAuditLog.created_at)).offset(offset).limit(limit)
+            result = await session.execute(query)
+            logs = list(result.scalars().all())
+
+            return logs, total_count
+

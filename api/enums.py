@@ -265,3 +265,23 @@ class PostHogEvent(str, Enum):
     ORGANIZATION_USER_ASSOCIATED = "organization_user_associated"
     # usage_* events track orgs hitting capacity/limit boundaries
     USAGE_CONCURRENT_CALL_LIMIT_REACHED = "usage_concurrent_call_limit_reached"
+
+
+class UserRole(str, Enum):
+    """Hierarchical RBAC roles for multi-tenant SaaS architecture."""
+
+    SUPER_ADMIN = "super_admin"  # Full cross-tenant management, system infra
+    SUPPORT_ENGINEER = "support_engineer"  # Read-only impersonation & diagnostic access
+    TENANT_ADMIN = "tenant_admin"  # Organization admin, workflow & tool management
+    TENANT_USER = "tenant_user"  # Standard organization member / operator
+
+
+class SupportAuditAction(str, Enum):
+    """Audit action types for support impersonation and privileged operations."""
+
+    IMPERSONATE_START = "impersonate_start"
+    IMPERSONATE_END = "impersonate_end"
+    READ_RESOURCE = "read_resource"
+    BLOCKED_WRITE_ATTEMPT = "blocked_write_attempt"
+    CONFIG_OVERRIDE = "config_override"
+
